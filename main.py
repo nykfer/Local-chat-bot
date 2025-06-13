@@ -1,15 +1,20 @@
 import streamlit as st
 from chat_gpt import ChatGPTService
+from obsidian import add_note_to_obsidian
 import os
 
 def initialize_chat_history():
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "show_save_form" not in st.session_state:
+        st.session_state.show_save_form = False
+    if "current_response" not in st.session_state:
+        st.session_state.current_response = None
 
 def main():
     st.title("🤖 ChatGPT Assistant")
     
-    # Initialize chat history
+    # Initialize session state
     initialize_chat_history()
     
     # Initialize ChatGPT service
@@ -18,12 +23,17 @@ def main():
     # Sidebar for file uploads and options
     with st.sidebar:
         st.header("Settings")
+        
+        # Chat Model Settings
+        st.subheader("Model Settings")
         model = st.selectbox(
             "Select GPT Model",
-            ["gpt-4.1", "gpt-4o"],
+            ["gpt-4.1", "gpt-4o", "gpt-3.5-turbo"],
             index=0
         )
         
+        # File Upload Settings
+        st.subheader("File Upload")
         uploaded_file = st.file_uploader("Upload a file", type=["txt", "pdf", "docx"])
         uploaded_images = st.file_uploader("Upload images", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
@@ -39,18 +49,16 @@ def main():
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate response based on input type
+        # Generate response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 if uploaded_file is not None:
-                    # Save uploaded file temporarily
                     temp_path = f"temp_{uploaded_file.name}"
                     with open(temp_path, "wb") as f:
                         f.write(uploaded_file.getvalue())
                     response = chat_service.generate_response_by_file_input(temp_path, prompt, model)
                     os.remove(temp_path)
                 elif uploaded_images:
-                    # Save uploaded images temporarily
                     temp_paths = []
                     for img in uploaded_images:
                         temp_path = f"temp_{img.name}"
@@ -58,14 +66,52 @@ def main():
                             f.write(img.getvalue())
                         temp_paths.append(temp_path)
                     response = chat_service.generate_response_by_image_input(temp_paths, prompt, model)
-                    # Clean up temporary files
                     for path in temp_paths:
                         os.remove(path)
                 else:
                     response = chat_service.generate_response_by_text_input(prompt, model)
-                
+
                 st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
+                st.session_state.current_response = response  # Save for later
+
+    # Save Response Section (below chat)
+    if st.session_state.current_response:
+        st.divider()
+        st.markdown("## 💾 Save Response")
+
+        if st.button("Save to Obsidian", key="save_button"):
+            st.session_state.show_save_form = True
+
+        if st.session_state.show_save_form:
+            with st.form(key="save_form"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    note_dir = st.selectbox(
+                        "Select Directory",
+                        ["Notion", "ChatGPT", "Projects", "Personal"],
+                        index=0,
+                        key="note_dir_select"
+                    )
+                with col2:
+                    note_name = st.text_input(
+                        "Note Name",
+                        placeholder="Enter note name (without .md)",
+                        key="note_name_input"
+                    )
+
+                submit_button = st.form_submit_button(label="Save Note")
+
+                if submit_button:
+                    if note_name:
+                        try:
+                            add_note_to_obsidian(note_name, st.session_state.current_response, note_dir)
+                            st.success(f"✅ Saved to Obsidian in {note_dir}/{note_name}.md")
+                            st.session_state.show_save_form = False
+                        except Exception as e:
+                            st.error(f"❌ Failed to save note: {str(e)}")
+                    else:
+                        st.error("Please enter a note name")
 
 if __name__ == "__main__":
     main()
