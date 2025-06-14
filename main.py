@@ -1,6 +1,7 @@
 import streamlit as st
 from chat_gpt import ChatGPTService
 from obsidian import add_note_to_obsidian
+from get_developer_promt import developer_promts
 import os
 
 def initialize_chat_history():
@@ -10,6 +11,8 @@ def initialize_chat_history():
         st.session_state.show_save_form = False
     if "current_response" not in st.session_state:
         st.session_state.current_response = None
+    if "selected_task" not in st.session_state:
+        st.session_state.selected_task = None
 
 def main():
     st.title("🤖 ChatGPT Assistant")
@@ -17,12 +20,37 @@ def main():
     # Initialize session state
     initialize_chat_history()
     
-    # Initialize ChatGPT service
-    chat_service = ChatGPTService()
-    
-    # Sidebar for file uploads and options
+    # Sidebar for task selection and options
     with st.sidebar:
         st.header("Settings")
+        
+        # Task Selection
+        st.subheader("Task Selection")
+        task = st.selectbox(
+            "What would you like to do?",
+            [
+                "Note Taking (Obsidian)",
+                "General Assistant",
+                # Add more tasks here as needed
+            ],
+            index=0
+        )
+        
+        # Map friendly names to prompt keys
+        task_to_prompt = {
+            "Note Taking (Obsidian)": "note_taking_obsidian",
+            "General Assistant": "general_assistant",
+            # Add more mappings here as needed
+        }
+        
+        # Update selected task in session state
+        if st.session_state.selected_task != task_to_prompt[task]:
+            st.session_state.selected_task = task_to_prompt[task]
+            st.session_state.messages = []  # Clear chat history when task changes
+        
+        # Initialize ChatGPT service with selected prompt
+        developer_prompt  = developer_promts[st.session_state.selected_task]
+        chat_service = ChatGPTService(developer_prompt)
         
         # Chat Model Settings
         st.subheader("Model Settings")

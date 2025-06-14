@@ -1,18 +1,18 @@
-# Імпорт необхідних бібліотек
+# Import necessary libraries
 from openai import OpenAI
 import dotenv
 import os
 import base64
 
-# Завантаження змінних середовища
+# Load environment variables from .env file
 dotenv.load_dotenv()
 
 class ChatGPTService:
-    def __init__(self):
+    def __init__(self, developer_prompt: str = "You are a helpful assistant."):
 
         self.client = OpenAI(api_key=os.getenv("OPENAI-API-KEY"))
 
-        self.developer_prompt = """You are a helpful assistant. Your job is to help user with managing his task."""
+        self.developer_prompt = developer_prompt
 
     def generate_response_by_text_input(self, user_question: str, model:str = "gpt-4.1") -> str:
         try:
@@ -113,8 +113,15 @@ class ChatGPTService:
             return f"Error processing image: {str(e)}"
     
 if __name__ == "__main__":
+    
     file_path = "D:/універ книги/Операційне числення/Легеза_Олещенко Операційне числення.pdf"
     chat_gpt_service = ChatGPTService()
     question = "create a markdown note with detail explanation about Laplace transform"
     response = chat_gpt_service.generate_response_by_file_input(file_path, question)
     print(response)
+    
+    from obsidian import add_note_to_obsidian
+    question = "Write a markdown note with the explanation of an integral. Add some formulas"
+    response = chat_gpt_service.generate_response_by_text_input(question)
+    print(response)
+    add_note_to_obsidian("Integral_Explanation", response, "Notion")
