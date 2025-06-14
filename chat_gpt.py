@@ -1,10 +1,10 @@
-# Імпорт необхідних бібліотек
+# Import necessary libraries
 from openai import OpenAI
 import dotenv
 import os
 import base64
 
-# Завантаження змінних середовища
+# Load environment variables from .env file
 dotenv.load_dotenv()
 
 class ChatGPTService:
@@ -12,7 +12,7 @@ class ChatGPTService:
 
         self.client = OpenAI(api_key=os.getenv("OPENAI-API-KEY"))
 
-        self.developer_prompt = """You are a helpful assistant. Your job is to help user with managing his task."""
+        self.developer_prompt = developer_prompt
 
     def generate_response_by_text_input(self, user_question: str, model:str = "gpt-4.1") -> str:
         try:
