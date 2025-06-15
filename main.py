@@ -2,6 +2,8 @@ import streamlit as st
 from chat_gpt import ChatGPTService
 from obsidian import add_note_to_obsidian
 from get_developer_promt import developer_promts
+from pdf_spliter import split_pdf
+from PyPDF2 import PdfReader
 import os
 
 def initialize_chat_history():
@@ -63,6 +65,31 @@ def main():
         # File Upload Settings
         st.subheader("File Upload")
         uploaded_file = st.file_uploader("Upload a file", type=["txt", "pdf", "docx"])
+        
+        # PDF Settings (only show if PDF is uploaded)
+        if uploaded_file and uploaded_file.type == "application/pdf":
+            # Create temporary file to get page count
+            temp_path = f"temp_{uploaded_file.name}"
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.getvalue())
+            
+            # Get total pages
+            reader = PdfReader(temp_path)
+            total_pages = len(reader.pages)
+            os.remove(temp_path)
+            
+            st.subheader("PDF Settings")
+            split_pdf_option = st.checkbox("Split PDF before processing", value=False)
+            
+            if split_pdf_option:
+                st.write("Select page range to process:")
+                col1, col2 = st.columns(2)
+                with col1:
+                    start_page = st.number_input("Start Page", min_value=1, max_value=total_pages, value=1, step=1)
+                with col2:
+                    end_page = st.number_input("End Page", min_value=start_page, max_value=total_pages, value=min(start_page + 1, total_pages), step=1)
+                st.caption(f"Total pages in PDF: {total_pages}")
+                
         uploaded_images = st.file_uploader("Upload images", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
     # Display chat messages
@@ -84,7 +111,22 @@ def main():
                     temp_path = f"temp_{uploaded_file.name}"
                     with open(temp_path, "wb") as f:
                         f.write(uploaded_file.getvalue())
-                    response = chat_service.generate_response_by_file_input(temp_path, prompt, model)
+                    
+                    if uploaded_file.type == "application/pdf" and split_pdf_option:
+                        try:
+                            # Create a temporary file with selected pages
+                            output_path = f"temp_selected_{uploaded_file.name}"
+                            # Convert to 0-based indexing for split_pdf
+                            split_pdf(temp_path, start_page - 1, end_page, output_path)
+                            # Use the selected pages for the response
+                            response = chat_service.generate_response_by_file_input(output_path, prompt, model)
+                            # Clean up temporary files
+                            os.remove(output_path)
+                        except Exception as e:
+                            response = f"Error processing PDF pages: {str(e)}"
+                    else:
+                        response = chat_service.generate_response_by_file_input(temp_path, prompt, model)
+                    
                     os.remove(temp_path)
                 elif uploaded_images:
                     temp_paths = []
