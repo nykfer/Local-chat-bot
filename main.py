@@ -58,7 +58,7 @@ def main():
         st.subheader("Model Settings")
         model = st.selectbox(
             "Select GPT Model",
-            ["gpt-4.1", "gpt-4o", "gpt-3.5-turbo"],
+            ["gpt-4.1", "o1"],
             index=0
         )
         
@@ -146,42 +146,43 @@ def main():
                 st.session_state.current_response = response  # Save for later
 
     # Save Response Section (below chat)
-    if st.session_state.current_response:
-        st.divider()
-        st.markdown("## 💾 Save Response")
+    if st.session_state.selected_task == "note_taking_obsidian":
+        if st.session_state.current_response:
+            st.divider()
+            st.markdown("## 💾 Save Response")
 
-        if st.button("Save to Obsidian", key="save_button"):
-            st.session_state.show_save_form = True
+            if st.button("Save to Obsidian", key="save_button"):
+                st.session_state.show_save_form = True
 
-        if st.session_state.show_save_form:
-            with st.form(key="save_form"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    note_dir = st.selectbox(
-                        "Select Directory",
-                        ["Notion", "ChatGPT", "Projects", "Personal"],
-                        index=0,
-                        key="note_dir_select"
-                    )
-                with col2:
-                    note_name = st.text_input(
-                        "Note Name",
-                        placeholder="Enter note name (without .md)",
-                        key="note_name_input"
-                    )
+            if st.session_state.show_save_form:
+                with st.form(key="save_form"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        note_dir = st.selectbox(
+                            "Select Directory",
+                            ["Notion", "ChatGPT", "Projects", "Personal"],
+                            index=0,
+                            key="note_dir_select"
+                        )
+                    with col2:
+                        note_name = st.text_input(
+                            "Note Name",
+                            placeholder="Enter note name (without .md)",
+                            key="note_name_input"
+                        )
 
-                submit_button = st.form_submit_button(label="Save Note")
+                    submit_button = st.form_submit_button(label="Save Note")
 
-                if submit_button:
-                    if note_name:
-                        try:
-                            add_note_to_obsidian(note_name, st.session_state.current_response, note_dir)
-                            st.success(f"✅ Saved to Obsidian in {note_dir}/{note_name}.md")
-                            st.session_state.show_save_form = False
-                        except Exception as e:
-                            st.error(f"❌ Failed to save note: {str(e)}")
-                    else:
-                        st.error("Please enter a note name")
+                    if submit_button:
+                        if note_name:
+                            try:
+                                add_note_to_obsidian(note_name, st.session_state.current_response, note_dir)
+                                st.success(f"✅ Saved to Obsidian in {note_dir}/{note_name}.md")
+                                st.session_state.show_save_form = False
+                            except Exception as e:
+                                st.error(f"❌ Failed to save note: {str(e)}")
+                        else:
+                            st.error("Please enter a note name")
 
 if __name__ == "__main__":
     main()
